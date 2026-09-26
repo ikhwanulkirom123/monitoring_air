@@ -654,7 +654,38 @@ nama_file = "monitoring_udara_tegal.html"
 peta.save(nama_file)
 print(f"[SUCCESS] Peta berhasil disimpan ke '{nama_file}'")
 
-# Membuka file di default browser
+# Membuka file di browser Google Chrome
 file_path = "file://" + os.path.realpath(nama_file)
-print(f"[INFO] Membuka {file_path} di browser...")
-webbrowser.open(file_path)
+print(f"[INFO] Membuka {file_path} di Google Chrome...")
+
+chrome_opened = False
+# Daftar path lokasi executable Google Chrome untuk berbagai Sistem Operasi
+chrome_paths = [
+    # Windows 64-bit & 32-bit
+    "C:/Program Files/Google/Chrome/Application/chrome.exe %s",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s",
+    "C:/Users/%USERNAME%/AppData/Local/Google/Chrome/Application/chrome.exe %s",
+    # macOS
+    "open -a /Applications/Google\\ Chrome.app %s",
+    # Linux / Ubuntu
+    "google-chrome %s",
+    "chrome %s",
+    "chromium %s"
+]
+
+for path in chrome_paths:
+    try:
+        browser = webbrowser.get(path)
+        browser.open(file_path)
+        chrome_opened = True
+        break
+    except Exception:
+        continue
+
+# Fallback jika path spesifik Chrome tidak ditemukan
+if not chrome_opened:
+    try:
+        webbrowser.get('chrome').open(file_path)
+    except Exception:
+        print("[INFO] Google Chrome tidak ditemukan di path standar, membuka dengan browser default...")
+        webbrowser.open(file_path)
