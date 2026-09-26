@@ -74,6 +74,7 @@ def fetch_iqair_air_quality(api_key):
         humidity_val = "-"
         wind_speed_val = "-"
         stasiun_online = False
+        res_data = None
 
         if global_online:
             try:
@@ -214,14 +215,15 @@ if os.path.exists(path_peta_qgis):
     except Exception as e:
         print(f"[ERROR] Gagal membaca file GeoJSON ({path_peta_qgis}): {e}")
 else:
-    print(f"[PERINGATAN] File '{path_peta_qgis}' tidak ditemukan di folder yang sama!")
+    print(f"[PERINGATAN] File '{path_peta_qgis}' tidak ditemukan di folder yang sama! Peta tetap akan dimuat tanpa batas administrasi.")
 
 # 3. AMBIL DATA REAL-TIME DARI API
+print("[INFO] Mengambil data kualitas udara dan cuaca...")
 df_udara, is_live_data = fetch_iqair_air_quality(IQAIR_API_KEY)
 
-# 4. BUAT PETA OFFLINE
+# 4. BUAT PETA
 peta = folium.Map(
-    location=[-6.8671, 109.1372], zoom_start=12, zoom_control=False, tiles=None
+    location=[-6.8671, 109.1372], zoom_start=13, zoom_control=False, tiles="OpenStreetMap"
 )
 
 # Ambil ID peta secara aman untuk kompatibilitas lintas browser di JavaScript
@@ -247,13 +249,13 @@ if gdf_kota_tegal is not None:
             "fillColor": "#E8F5E9",
             "color": "#03AC0E",
             "weight": 1.5,
-            "fillOpacity": 0.6,
+            "fillOpacity": 0.3,
         },
         highlight_function=lambda feature: {
             "fillColor": "#03AC0E",
             "color": "#02880B",
             "weight": 2.5,
-            "fillOpacity": 0.8,
+            "fillOpacity": 0.6,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=[kolom_pencarian],
@@ -277,21 +279,21 @@ if gdf_kota_tegal is not None:
         zoom_on_click=True,
         position="topleft",
     ).add_to(peta)
+
 # 4b. Plot Marker Sensor & List Item UI
 panel_items_html = ""
 
 if not df_udara.empty:
-  for _, row in df_udara.iterrows():
-    status_badge_color = (
-        "#03AC0E" if row["status_stasiun"] == "ONLINE" else "#757575"
-    )
-    status_badge_bg = (
-        "#E8F5E9" if row["status_stasiun"] == "ONLINE" else "#EEEEEE"
-    )
+    for _, row in df_udara.iterrows():
+        status_badge_color = (
+            "#03AC0E" if row["status_stasiun"] == "ONLINE" else "#757575"
+        )
+        status_badge_bg = (
+            "#E8F5E9" if row["status_stasiun"] == "ONLINE" else "#EEEEEE"
+        )
 
-    popup_html = f"""
+        popup_html = f"""
         <div class="popup-card" style="font-family: Arial, sans-serif; min-width: 200px; max-width: 240px; padding: 2px;">
-
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                 <span style="font-size: 10px; font-weight: 700; background-color: {status_badge_bg}; color: {status_badge_color}; padding: 2px 6px; border-radius: 4px;">
                     ● {row['status_stasiun']}
@@ -300,25 +302,23 @@ if not df_udara.empty:
                     {row['kategori']}
                 </span>
             </div>
-
             <div class="theme-text-main" style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">{row['stasiun']}</div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; text-align: center; margin-bottom: 8px;">
-                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px;">
-                    <div class="theme-text-sub" style="font-size: 9px;">PM2.5</div>
+                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px; background-color: #F3F4F5;">
+                    <div class="theme-text-sub" style="font-size: 9px; color: #6C727C;">PM2.5</div>
                     <div style="font-size: 11px; font-weight: 800; color: #03AC0E;">{row['pm25']} <span style="font-size: 7px;">µg/m³</span></div>
                 </div>
-                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px;">
-                    <div class="theme-text-sub" style="font-size: 9px;">O3 (Ozon)</div>
+                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px; background-color: #F3F4F5;">
+                    <div class="theme-text-sub" style="font-size: 9px; color: #6C727C;">O3</div>
                     <div style="font-size: 11px; font-weight: 800; color: #0288D1;">{row['o3']} <span style="font-size: 7px;">µg/m³</span></div>
                 </div>
-                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px;">
-                    <div class="theme-text-sub" style="font-size: 9px;">Suhu</div>
+                <div class="theme-bg-sub" style="border-radius: 8px; padding: 6px 2px; background-color: #F3F4F5;">
+                    <div class="theme-text-sub" style="font-size: 9px; color: #6C727C;">Suhu</div>
                     <div style="font-size: 11px; font-weight: 800; color: #E65100;">{row['temp']} <span style="font-size: 7px;">°C</span></div>
                 </div>
             </div>
-
-            <div class="weather-box" style="border-radius: 8px; padding: 8px; font-size: 11px;">
+            <div class="weather-box" style="border-radius: 8px; padding: 8px; font-size: 11px; background: #E3F2FD; color: #0D47A1;">
                 <div style="font-weight: 700; margin-bottom: 2px;">⛅ {row['cuaca_sekarang']}</div>
                 <div>Lembap: {row['kelembapan']} | Angin: {row['kecepatan_angin']}</div>
                 <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(144, 202, 249, 0.5);">
@@ -328,8 +328,8 @@ if not df_udara.empty:
         </div>
         """
 
-    custom_icon = folium.DivIcon(
-        html=f"""
+        custom_icon = folium.DivIcon(
+            html=f"""
             <div style="position: relative; width: 32px; height: 32px;">
                 <div style="
                     background-color: {row['color']};
@@ -353,21 +353,21 @@ if not df_udara.empty:
                 </div>
             </div>
             """,
-        icon_size=(32, 32),
-        icon_anchor=(16, 32),
-    )
+            icon_size=(32, 32),
+            icon_anchor=(16, 32),
+        )
 
-    folium.Marker(
-        location=[row["lat"], row["lon"]],
-        popup=folium.Popup(popup_html, max_width=260),
-        tooltip=(
-            f"<b>{row['stasiun']}</b> [{row['status_stasiun']}]:"
-            f" {row['cuaca_sekarang']}"
-        ),
-        icon=custom_icon,
-    ).add_to(peta)
+        folium.Marker(
+            location=[row["lat"], row["lon"]],
+            popup=folium.Popup(popup_html, max_width=260),
+            tooltip=(
+                f"<b>{row['stasiun']}</b> [{row['status_stasiun']}]:"
+                f" {row['cuaca_sekarang']}"
+            ),
+            icon=custom_icon,
+        ).add_to(peta)
 
-    panel_items_html += f"""
+        panel_items_html += f"""
         <div class="station-card" onclick="focusStation({row['lat']}, {row['lon']})" 
              style="padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -487,15 +487,12 @@ dashboard_ui = f"""
             max-width: none;
             padding: 10px 14px;
         }}
-
         .btn-toggle-theme {{
             top: 12px;
             right: 12px;
             padding: 4px 8px;
             font-size: 10px;
         }}
-
-        /* Ubah Panel Samping menjadi Bottom Drawer */
         .ui-panel {{
             top: auto;
             bottom: 0;
@@ -508,79 +505,25 @@ dashboard_ui = f"""
             transform: translateY(calc(100% - 42px));
             z-index: 1000;
         }}
-
-        .ui-panel.open {{
-            transform: translateY(0);
-        }}
-
-        .panel-toggle-btn {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 6px 0;
-            cursor: pointer;
-        }}
-
-        .panel-drag-handle {{
-            width: 40px;
-            height: 4px;
-            background-color: #CBD5E1;
-            border-radius: 2px;
-        }}
-
-        .ui-legend {{
-            bottom: 50px;
-            left: 12px;
-            padding: 8px 10px;
-            font-size: 10px;
-            width: auto;
-            max-width: 160px;
-        }}
-
-        /* Penyesuaian Kontrol Leaflet di HP */
-        .leaflet-top.leaflet-left {{
-            top: 100px !important;
-        }}
+        .ui-panel.open {{ transform: translateY(0); }}
+        .panel-toggle-btn {{ display: flex; align-items: center; justify-content: center; width: 100%; padding: 6px 0; cursor: pointer; }}
+        .panel-drag-handle {{ width: 40px; height: 4px; background-color: #CBD5E1; border-radius: 2px; }}
+        .ui-legend {{ bottom: 50px; left: 12px; padding: 8px 10px; font-size: 10px; width: auto; max-width: 160px; }}
+        .leaflet-top.leaflet-left {{ top: 100px !important; }}
     }}
 
     /* WARNA MODE GELAP (DARK MODE) */
     body.dark-mode .leaflet-container {{ background-color: #111827 !important; }}
-    
-    body.dark-mode .theme-card, 
-    body.dark-mode .ui-header, 
-    body.dark-mode .ui-panel, 
-    body.dark-mode .ui-legend {{ 
-        background-color: #1E293B !important; 
-        color: #F8FAFC !important; 
-        border-color: #334155 !important; 
+    body.dark-mode .theme-card, body.dark-mode .ui-header, body.dark-mode .ui-panel, body.dark-mode .ui-legend {{ 
+        background-color: #1E293B !important; color: #F8FAFC !important; border-color: #334155 !important; 
     }}
-    
     body.dark-mode .theme-text-main {{ color: #F8FAFC !important; }}
     body.dark-mode .theme-text-sub {{ color: #94A3B8 !important; }}
     body.dark-mode .theme-bg-sub {{ background-color: #0F172A !important; }}
-    
-    body.dark-mode .station-card {{ 
-        background-color: #0F172A !important; 
-        border-color: #334155 !important; 
-    }}
-    
-    body.dark-mode .weather-box {{ 
-        background: #1E3A8A !important; 
-        color: #BFDBFE !important; 
-    }}
-
-    body.dark-mode .btn-toggle-theme {{ 
-        background-color: #1E293B !important; 
-        color: #F8FAFC !important; 
-        border-color: #334155 !important; 
-    }}
-
-    body.dark-mode .leaflet-popup-content-wrapper, 
-    body.dark-mode .leaflet-popup-tip {{
-        background: #1E293B !important;
-        color: #F8FAFC !important;
-    }}
+    body.dark-mode .station-card {{ background-color: #0F172A !important; border-color: #334155 !important; }}
+    body.dark-mode .weather-box {{ background: #1E3A8A !important; color: #BFDBFE !important; }}
+    body.dark-mode .btn-toggle-theme {{ background-color: #1E293B !important; color: #F8FAFC !important; border-color: #334155 !important; }}
+    body.dark-mode .leaflet-popup-content-wrapper, body.dark-mode .leaflet-popup-tip {{ background: #1E293B !important; color: #F8FAFC !important; }}
 </style>
 
 <div id="splash-screen">
@@ -706,3 +649,12 @@ dashboard_ui = f"""
 """
 
 peta.get_root().html.add_child(folium.Element(dashboard_ui))
+
+nama_file = "monitoring_udara_tegal.html"
+peta.save(nama_file)
+print(f"[SUCCESS] Peta berhasil disimpan ke '{nama_file}'")
+
+# Membuka file di default browser
+file_path = "file://" + os.path.realpath(nama_file)
+print(f"[INFO] Membuka {file_path} di browser...")
+webbrowser.open(file_path)
